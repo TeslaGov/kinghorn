@@ -25,10 +25,14 @@ Configuration is handled with environment variables, as follows:
  - KINGHORN_LOGGING_FILE
  - KINGHORN_CACHE_LOCATION
 
-
 #### Files
- - kinghorn.py - The library  
- - test_kinghorn.py - An example file describing some ways to use the library and testing all functions
+ - publish.sh - Helper script to publish to PyPI
+ - setup.py - Metadata for publishing packages
+ - .gitignore - Files to ignore for git
+ - kinghorn/__main__.py - Basic validation script for module
+ - kinghorn/__init__.py - Exports all public functions
+ - kinghorn/kinghorn.py - The library
+ - kinghorn/test_kinghorn.py - An example file describing some ways to use the library and testing all functions
  
 #### Future feature ideas
   - Additional entities for different services in AWS as I need them
