@@ -19,7 +19,6 @@ python3 -m kinghorn
 
 #### Configuration
 Configuration is handled with environment variables, as follows:
- - KINGHORN_REGION - Which region you want to use
  - KINGHORN_ENVIRONMENT - Which environment your API credentials are for, for example factory, production, etc.
  - KINGHORN_LOGGING_OUT - Set to 1 to log to std out, useful for local testing and debugging
  - KINGHORN_LOGGING_LEVEL
