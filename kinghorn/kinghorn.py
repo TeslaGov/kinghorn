@@ -1,187 +1,200 @@
 import json
 import os
 import shutil
+import sys
+import logging
 
-class Kinghorn:
-    def __init__(self, cache_path, logger):
-        self.cache_path = cache_path
-        self.logger = logger
+environment = os.environ.get("KINGHORN_ENVIRONMENT", "default")
+logging_level = os.environ.get("KINGHORN_LOGGING_LEVEL", "INFO")
+logging_std_out = os.environ.get("KINGHORN_LOGGING_OUT", 0)
+logging_file = os.environ.get("KINGHORN_LOGGING_FILE", "kinghorn.log")
+cache_location = os.environ.get("KINGHORN_CACHE_LOCATION", "/tmp/.kinghorn_cache")
 
-    def create_folder(self, folder_path):
-        self.logger.debug("Creating folder " + folder_path)
+if int(logging_std_out) == 1:
+    logging.basicConfig(stream=sys.stdout, level=logging_level)
+else:
+    logging.basicConfig(filename=logging_file,level=logging_level)
+    
+logger = logging.getLogger(__name__)
 
-        try:
-            os.makedirs(folder_path)
-        except:
-            pass
+# Eventually paths will be (by default), something like /tmp/.kinghorn_cache/default/instance/i-123.json for an EC2 instance
+cache_path = cache_location + "/" + environment
 
-    def cache_instance_info(self, ec2_client):
-        """cache ec2 instance information"""
-        self.logger.info("Starting EC2 instance caching")
-        instance_paginator = ec2_client.get_paginator("describe_instances")
-        folder_path = self.cache_path + "/instance"
-        self.create_folder(folder_path)
+def create_folder(folder_path):
+    logger.debug("Creating folder " + folder_path)
 
-        for instance_response in instance_paginator.paginate():
-            for reservation in instance_response.get("Reservations"):
-                for instance in reservation.get("Instances"):
-                    file_path = folder_path + "/" + instance.get("InstanceId") + ".json"
+    try:
+        os.makedirs(folder_path)
+    except:
+        pass
 
-                    with open(file_path, "w") as out_file:
-                        self.logger.debug("Dumping instance information to " + file_path)
-                        json.dump(instance, out_file, default=str)
+def cache_instance_info(ec2_client):
+    """cache ec2 instance information"""
+    logger.info("Starting EC2 instance caching")
+    instance_paginator = ec2_client.get_paginator("describe_instances")
+    folder_path = cache_path + "/instance"
+    create_folder(folder_path)
 
-        self.logger.info("Finished EC2 instance caching")
-
-    def cache_volume_info(self, ec2_client):
-        """cache ec2 volume information"""
-        self.logger.info("Starting EC2 volume caching")
-        volume_paginator = ec2_client.get_paginator("describe_volumes")
-        folder_path = self.cache_path + "/volume"
-        self.create_folder(folder_path)
-
-        for volume_response in volume_paginator.paginate():
-            for volume in volume_response.get("Volumes"):
-                file_path = folder_path + "/" + volume.get("VolumeId") + ".json"
+    for instance_response in instance_paginator.paginate():
+        for reservation in instance_response.get("Reservations"):
+            for instance in reservation.get("Instances"):
+                file_path = folder_path + "/" + instance.get("InstanceId") + ".json"
 
                 with open(file_path, "w") as out_file:
-                    self.logger.debug("Dumping volume information to " + file_path)
-                    json.dump(volume, out_file, default=str)
+                    logger.debug("Dumping instance information to " + file_path)
+                    json.dump(instance, out_file, default=str)
 
-        self.logger.info("Finished EC2 volume caching")
+    logger.info("Finished EC2 instance caching")
 
-    def cache_snapshot_info(self, ec2_client):
-        """cache ec2 snapshot information"""
-        self.logger.info("Starting EC2 snapshot caching")
-        snapshot_paginator = ec2_client.get_paginator("describe_snapshots")
-        folder_path = self.cache_path + "/snapshot"
-        self.create_folder(folder_path)
+def cache_volume_info(ec2_client):
+    """cache ec2 volume information"""
+    logger.info("Starting EC2 volume caching")
+    volume_paginator = ec2_client.get_paginator("describe_volumes")
+    folder_path = cache_path + "/volume"
+    create_folder(folder_path)
 
-        for snapshot_response in snapshot_paginator.paginate(OwnerIds=["self"]):
-            for snapshot in snapshot_response.get("Snapshots"):
-                file_path = folder_path + "/" + snapshot.get("SnapshotId") + ".json"
+    for volume_response in volume_paginator.paginate():
+        for volume in volume_response.get("Volumes"):
+            file_path = folder_path + "/" + volume.get("VolumeId") + ".json"
 
-                with open(file_path, "w") as out_file:
-                    json.dump(snapshot, out_file, default=str)
+            with open(file_path, "w") as out_file:
+                logger.debug("Dumping volume information to " + file_path)
+                json.dump(volume, out_file, default=str)
 
-    def cache_all_if_needed(self, ec2_client):
-        """cache all ec2 information if needed"""
-        if not os.path.exists(self.cache_path + "/instance"):
-            self.cache_instance_info(ec2_client)
+    logger.info("Finished EC2 volume caching")
 
-        if not os.path.exists(self.cache_path + "/volume"):
-            self.cache_volume_info(ec2_client)
+def cache_snapshot_info(ec2_client):
+    """cache ec2 snapshot information"""
+    logger.info("Starting EC2 snapshot caching")
+    snapshot_paginator = ec2_client.get_paginator("describe_snapshots")
+    folder_path = cache_path + "/snapshot"
+    create_folder(folder_path)
 
-        if not os.path.exists(self.cache_path + "/snapshot"):
-            self.cache_snapshot_info(ec2_client)
+    for snapshot_response in snapshot_paginator.paginate(OwnerIds=["self"]):
+        for snapshot in snapshot_response.get("Snapshots"):
+            file_path = folder_path + "/" + snapshot.get("SnapshotId") + ".json"
 
-    def cache_all_ec2(self, ec2_client):
-        """cache all ec2 information"""
-        self.cache_instance_info(ec2_client)
-        self.cache_volume_info(ec2_client)
-        self.cache_snapshot_info(ec2_client)
+            with open(file_path, "w") as out_file:
+                json.dump(snapshot, out_file, default=str)
 
-    def clean_cache(self):
-        """clean our cache if it exists"""
-        try:
-            shutil.rmtree("cache")
-        except:
-            pass
+def cache_all_if_needed(ec2_client):
+    """cache all ec2 information if needed"""
+    if not os.path.exists(cache_path + "/instance"):
+        cache_instance_info(ec2_client)
 
-    def load_info_from_cache(self, entity):
-        """load information about an entity from cache"""
+    if not os.path.exists(cache_path + "/volume"):
+        cache_volume_info(ec2_client)
 
-        if (entity not in ["instance", "volume", "snapshot"]):
-            self.logger.error(entity + " is not currently supported by Kinghorn")
-            return
+    if not os.path.exists(cache_path + "/snapshot"):
+        cache_snapshot_info(ec2_client)
 
-        entity_info = {}
+def cache_all_ec2(ec2_client):
+    """cache all ec2 information"""
+    cache_instance_info(ec2_client)
+    cache_volume_info(ec2_client)
+    cache_snapshot_info(ec2_client)
 
-        folder_path = self.cache_path + "/" + entity
+def clean_cache():
+    """clean our cache if it exists"""
+    try:
+        shutil.rmtree("cache")
+    except:
+        pass
 
-        for file in os.listdir(folder_path):
-            file_path = folder_path + "/" + file
-            entity_id = file[:-5]
+def load_info_from_cache(entity):
+    """load information about an entity from cache"""
 
-            with open(file_path, "r") as input_file:
-                entity_info[entity_id] = json.load(input_file)
+    if (entity not in ["instance", "volume", "snapshot"]):
+        logger.error(entity + " is not currently supported by Kinghorn")
+        return
 
-        return entity_info
+    entity_info = {}
 
-    def get_instance_id_to_name_map(self, instance_info):
-        """generate instance_id to instance_name map.  If an instance has no name it will have value 'unknown'."""
-        instance_id_to_name = {}
+    folder_path = cache_path + "/" + entity
 
-        for instance_id in instance_info:
-            instance = instance_info[instance_id]
+    for file in os.listdir(folder_path):
+        file_path = folder_path + "/" + file
+        entity_id = file[:-5]
 
-            instance_name = "unnamed"
+        with open(file_path, "r") as input_file:
+            entity_info[entity_id] = json.load(input_file)
 
-            if "Tags" in instance:
-                for tag in instance["Tags"]:
-                    if tag["Key"] == "Name":
-                        instance_name = tag["Value"]
+    return entity_info
 
-            instance_id_to_name[instance["InstanceId"]] = instance_name
+def get_instance_id_to_name_map(instance_info):
+    """generate instance_id to instance_name map.  If an instance has no name it will have value 'unknown'."""
+    instance_id_to_name = {}
 
-        return instance_id_to_name
+    for instance_id in instance_info:
+        instance = instance_info[instance_id]
 
-    def get_instance_name_to_id_map(self, instance_info):
-        """
-        generate instance_name to instance_id map.
-        Every instance without a name will be given a key 'unknownx', where x is an incrementing number of instances without a key.
-        """
-        instance_name_to_id = {}
-        unknown_instance_count = 0
+        instance_name = "unnamed"
 
-        for instance_id in instance_info:
-            instance = instance_info[instance_id]
+        if "Tags" in instance:
+            for tag in instance["Tags"]:
+                if tag["Key"] == "Name":
+                    instance_name = tag["Value"]
 
-            instance_name = "unnamed" + str(unknown_instance_count)
+        instance_id_to_name[instance["InstanceId"]] = instance_name
 
-            if "Tags" in instance:
-                for tag in instance["Tags"]:
-                    if tag["Key"] == "Name":
-                        instance_name = tag["Value"]
+    return instance_id_to_name
 
-            if instance_name == "unnamed" + str(unknown_instance_count):
-                unknown_instance_count = unknown_instance_count + 1
+def get_instance_name_to_id_map(instance_info):
+    """
+    generate instance_name to instance_id map.
+    Every instance without a name will be given a key 'unknownx', where x is an incrementing number of instances without a key.
+    """
+    instance_name_to_id = {}
+    unknown_instance_count = 0
 
-            instance_name_to_id[instance_name] = instance["InstanceId"]
+    for instance_id in instance_info:
+        instance = instance_info[instance_id]
 
-        return instance_name_to_id
+        instance_name = "unnamed" + str(unknown_instance_count)
 
-    def get_instance_id_to_volume_id_map(self, volume_info):
-        """Generate instance_id to volume id map.  Unattached volumes will be ignored."""
-        instance_id_to_volume_id_map = {}
+        if "Tags" in instance:
+            for tag in instance["Tags"]:
+                if tag["Key"] == "Name":
+                    instance_name = tag["Value"]
 
-        for volume_id in volume_info:
-            volume = volume_info.get(volume_id)
+        if instance_name == "unnamed" + str(unknown_instance_count):
+            unknown_instance_count = unknown_instance_count + 1
 
-            if volume.get("Attachments"):
-                # Attached volumes
-                ec2_instance_id = volume.get("Attachments")[0].get("InstanceId")
-                current_volumes = instance_id_to_volume_id_map.get(ec2_instance_id)
+        instance_name_to_id[instance_name] = instance["InstanceId"]
 
-                if current_volumes is None:
-                    current_volumes = []
+    return instance_name_to_id
 
-                current_volumes.append(volume_id)
+def get_instance_id_to_volume_id_map(volume_info):
+    """Generate instance_id to volume id map.  Unattached volumes will be ignored."""
+    instance_id_to_volume_id_map = {}
 
-                instance_id_to_volume_id_map[ec2_instance_id] = current_volumes
+    for volume_id in volume_info:
+        volume = volume_info.get(volume_id)
 
-        return instance_id_to_volume_id_map
+        if volume.get("Attachments"):
+            # Attached volumes
+            ec2_instance_id = volume.get("Attachments")[0].get("InstanceId")
+            current_volumes = instance_id_to_volume_id_map.get(ec2_instance_id)
 
-    def get_volume_id_to_instance_id_map(self, volume_info):
-        """Generate volume id to instance id map.  Unattached volumes will be ignored."""
-        instance_id_to_volume_id_map = {}
+            if current_volumes is None:
+                current_volumes = []
 
-        for volume_id in volume_info:
-            volume = volume_info.get(volume_id)
+            current_volumes.append(volume_id)
 
-            if volume.get("Attachments"):
-                # Attached volumes
-                ec2_instance_id = volume.get("Attachments")[0].get("InstanceId")
-                instance_id_to_volume_id_map[volume_id] = ec2_instance_id
+            instance_id_to_volume_id_map[ec2_instance_id] = current_volumes
 
-        return instance_id_to_volume_id_map
+    return instance_id_to_volume_id_map
+
+def get_volume_id_to_instance_id_map(volume_info):
+    """Generate volume id to instance id map.  Unattached volumes will be ignored."""
+    instance_id_to_volume_id_map = {}
+
+    for volume_id in volume_info:
+        volume = volume_info.get(volume_id)
+
+        if volume.get("Attachments"):
+            # Attached volumes
+            ec2_instance_id = volume.get("Attachments")[0].get("InstanceId")
+            instance_id_to_volume_id_map[volume_id] = ec2_instance_id
+
+    return instance_id_to_volume_id_map
