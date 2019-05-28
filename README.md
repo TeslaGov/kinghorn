@@ -8,14 +8,18 @@ This library provides caching of AWS resources, which can save development time 
 I've chosen to discard metadata and "unwrap" entity metadata for storage. I've used clients instead of resources for Kinghorn to make it easy to alter the library to access low level API functions if needed. The library expects appropriate credentials in ~/.aws/credentials.
 
 #### Installation instructions for Mac OS X
-ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"  
-brew install python
-curl -O http://python-distribute.org/distribute_setup.py
-python distribute_setup.py  
-curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py  
-python get-pip.py  
-pip3 install boto3
-python3 -m kinghorn
+ - ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
+ - brew install python
+ - curl -O http://python-distribute.org/distribute_setup.py
+ - python distribute_setup.py
+ - curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py
+ - python get-pip.py
+ - pip3 install boto3
+ - python3 -m kinghorn
+
+
+#### Publishing
+ - Bump version in `setup.py` and `kinghorn/__init.py__` and run ./publish.sh
 
 #### Configuration
 Configuration is handled with environment variables, as follows:
@@ -26,13 +30,13 @@ Configuration is handled with environment variables, as follows:
  - KINGHORN_CACHE_LOCATION
 
 #### Files
- - publish.sh - Helper script to publish to PyPI
- - setup.py - Metadata for publishing packages
- - .gitignore - Files to ignore for git
- - kinghorn/__main__.py - Basic validation script for module
- - kinghorn/__init__.py - Exports all public functions
- - kinghorn/kinghorn.py - The library
- - kinghorn/test_kinghorn.py - An example file describing some ways to use the library and testing all functions
+ - `publish.sh` - Helper script to publish to PyPI
+ - `setup.py` - Metadata for publishing packages
+ - `.gitignore` - Files to ignore for git
+ - `kinghorn/__main__.py` - Basic validation script for module
+ - `kinghorn/__init__.py` - Exports all public functions
+ - `kinghorn/kinghorn.py` - The library
+ - `kinghorn/test_kinghorn.py` - An example file describing some ways to use the library and testing all functions
  
 #### Future feature ideas
   - Additional entities for different services in AWS as I need them
