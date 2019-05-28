@@ -8,8 +8,10 @@ ec2_client = boto3.client(
 
 print("Cleaning cache")
 kinghorn.clean_cache()
-print("Caching everything")
-kinghorn.cache_all_ec2(ec2_client)
+print("Caching if needed")
+kinghorn.cache_all_if_needed(ec2_client)
+print("Caching all if needed(shouldn't do anything)")
+kinghorn.cache_all_if_needed(ec2_client)
 print("Getting instance info")
 instance_info = kinghorn.load_info_from_cache("instance")
 print("Getting volume info")

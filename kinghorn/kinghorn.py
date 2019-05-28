@@ -8,7 +8,7 @@ environment = os.environ.get("KINGHORN_ENVIRONMENT", "default")
 logging_level = os.environ.get("KINGHORN_LOGGING_LEVEL", "INFO")
 logging_std_out = os.environ.get("KINGHORN_LOGGING_OUT", 0)
 logging_file = os.environ.get("KINGHORN_LOGGING_FILE", "kinghorn.log")
-cache_location = os.environ.get("KINGHORN_CACHE_LOCATION", "~/.kinghorn_cache")
+cache_location = os.environ.get("KINGHORN_CACHE_LOCATION", "/tmp/.kinghorn_cache")
 
 if int(logging_std_out) == 1:
     logging.basicConfig(stream=sys.stdout, level=logging_level)
@@ -17,7 +17,7 @@ else:
     
 logger = logging.getLogger(__name__)
 
-# Eventually paths will be (by default), something like ~/.kinghorn_cache/default/instance/i-123.json for an EC2 instance
+# Eventually paths will be (by default), something like /tmp/.kinghorn_cache/default/instance/i-123.json for an EC2 instance
 cache_path = cache_location + "/" + environment
 
 def create_folder(folder_path):
@@ -76,6 +76,17 @@ def cache_snapshot_info(ec2_client):
 
             with open(file_path, "w") as out_file:
                 json.dump(snapshot, out_file, default=str)
+
+def cache_all_if_needed(ec2_client):
+    """cache all ec2 information if needed"""
+    if not os.path.exists(cache_path + "/instance"):
+        cache_instance_info(ec2_client)
+
+    if not os.path.exists(cache_path + "/volume"):
+        cache_volume_info(ec2_client)
+
+    if not os.path.exists(cache_path + "/snapshot"):
+        cache_snapshot_info(ec2_client)
 
 def cache_all_ec2(ec2_client):
     """cache all ec2 information"""
