@@ -12,4 +12,4 @@ from kinghorn.kinghorn import get_instance_name_to_id_map
 from kinghorn.kinghorn import get_volume_id_to_instance_id_map
 
 __author__ = "Jon Crain"
-__version__ = "0.0.6"
+__version__ = "0.0.7"
