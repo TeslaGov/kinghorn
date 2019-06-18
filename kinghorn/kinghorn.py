@@ -32,7 +32,7 @@ def cache_instance_info(ec2_client):
     """cache ec2 instance information"""
     logger.info("Starting EC2 instance caching")
     instance_paginator = ec2_client.get_paginator("describe_instances")
-    folder_path = cache_path + "/instance"
+    folder_path = cache_path + "/ec2/instance"
     create_folder(folder_path)
 
     for instance_response in instance_paginator.paginate():
@@ -50,7 +50,7 @@ def cache_volume_info(ec2_client):
     """cache ec2 volume information"""
     logger.info("Starting EC2 volume caching")
     volume_paginator = ec2_client.get_paginator("describe_volumes")
-    folder_path = cache_path + "/volume"
+    folder_path = cache_path + "/ec2/volume"
     create_folder(folder_path)
 
     for volume_response in volume_paginator.paginate():
@@ -67,7 +67,7 @@ def cache_snapshot_info(ec2_client):
     """cache ec2 snapshot information"""
     logger.info("Starting EC2 snapshot caching")
     snapshot_paginator = ec2_client.get_paginator("describe_snapshots")
-    folder_path = cache_path + "/snapshot"
+    folder_path = cache_path + "/ec2/snapshot"
     create_folder(folder_path)
 
     for snapshot_response in snapshot_paginator.paginate(OwnerIds=["self"]):
@@ -77,16 +77,40 @@ def cache_snapshot_info(ec2_client):
             with open(file_path, "w") as out_file:
                 json.dump(snapshot, out_file, default=str)
 
-def cache_all_if_needed(ec2_client):
+def cache_record_set_info(route53_client):
+    """cache route53 zone and record set information"""
+    logger.info("Starting Route 53 zone and record set caching")
+    hosted_zone_paginator = route53_client.get_paginator("list_hosted_zones")
+    folder_path = cache_path + "/route53/record_set"
+    create_folder(folder_path)
+
+    for hosted_zone_response in hosted_zone_paginator.paginate():
+        for hosted_zone in hosted_zone_response.get("HostedZones"):
+            zone_name = hosted_zone.get("Name")
+            zone_id = hosted_zone.get("Id")
+            record_set_paginator = route53_client.get_paginator("list_resource_record_sets")
+
+            for record_set_response in record_set_paginator.paginate(HostedZoneId=zone_id):
+                for record_set in record_set_response.get("ResourceRecordSets"):
+                    record_set_name = record_set.get("Name")
+                    file_path = folder_path + "/" + zone_name + "=" + record_set_name + ".json"
+
+                    with open(file_path, "w") as out_file:
+                        json.dump(record_set, out_file, default=str)
+
+def cache_all_if_needed(ec2_client, route53_client):
     """cache all ec2 information if needed"""
-    if not os.path.exists(cache_path + "/instance"):
+    if not os.path.exists(cache_path + "/ec2/instance"):
         cache_instance_info(ec2_client)
 
-    if not os.path.exists(cache_path + "/volume"):
+    if not os.path.exists(cache_path + "/ec2/volume"):
         cache_volume_info(ec2_client)
 
-    if not os.path.exists(cache_path + "/snapshot"):
+    if not os.path.exists(cache_path + "/ec2/snapshot"):
         cache_snapshot_info(ec2_client)
+
+    if not os.path.exists(cache_path + "/route53/zone"):
+        cache_record_set_info(route53_client)
 
 def cache_all_ec2(ec2_client):
     """cache all ec2 information"""
@@ -97,14 +121,14 @@ def cache_all_ec2(ec2_client):
 def clean_cache():
     """clean our cache if it exists"""
     try:
-        shutil.rmtree("cache")
+        shutil.rmtree(cache_path)
     except:
         pass
 
 def load_info_from_cache(entity):
     """load information about an entity from cache"""
 
-    if (entity not in ["instance", "volume", "snapshot"]):
+    if entity not in ["ec2/instance", "ec2/volume", "ec2/snapshot", "route53/record_set"]:
         logger.error(entity + " is not currently supported by Kinghorn")
         return
 
